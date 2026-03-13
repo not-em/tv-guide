@@ -11,7 +11,7 @@ Built for analysis and visualisation.
 ### strictly/
 Strictly Come Dancing series 10–22 (2012–2024).
 
-**Columns:** `series`, `celebrity`, `professional`, `week`, `dance`, `song`, `artist`, `total_score`, `craig`, `darcey`, `len`, `bruno`, `shirley`, `motsi`, `anton`, `verdict`.
+**Columns:** `series`, `celebrity`, `professional`, `week`, `dance`, `dance_style`, `song`, `artist`, `total_score`, `craig`, `darcey`, `len`, `bruno`, `shirley`, `motsi`, `anton`, `verdict`.
 
 Judge columns are `NaN` when that judge wasn't on the panel that series.
 
