@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Strictly — data</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f7f5f0; --bg2: #efecea; --bg3: #e8e4de;
+      --text: #1c1a17; --text2: #6b6760; --text3: #a09d99;
+      --border: rgba(0,0,0,0.08);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #1a1917; --bg2: #242220; --bg3: #2e2b28;
+        --text: #f0ede8; --text2: #a09d99; --text3: #6b6760;
+        --border: rgba(255,255,255,0.08);
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg: #1a1917; --bg2: #242220; --bg3: #2e2b28;
+      --text: #f0ede8; --text2: #a09d99; --text3: #6b6760;
+      --border: rgba(255,255,255,0.08);
+    }
+
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'DM Sans', sans-serif; font-weight: 300;
+      min-height: 100vh; padding: 4rem 2rem 6rem;
+    }
+
+    .theme-toggle {
+      position: fixed; top: 1.25rem; right: 1.25rem;
+      background: var(--bg2); border: 0.5px solid var(--border);
+      border-radius: 50%; width: 36px; height: 36px;
+      cursor: pointer; font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s; z-index: 10;
+    }
+    .theme-toggle:hover { background: var(--bg3); }
+
+    .container { max-width: 860px; margin: 0 auto; }
+
+    header {
+      margin-bottom: 4.5rem;
+      opacity: 0; animation: rise 0.7s ease 0.05s forwards;
+    }
+    .eyebrow {
+      font-size: 11px; text-transform: uppercase;
+      letter-spacing: 0.16em; color: var(--text3); margin-bottom: 1.2rem;
+    }
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(38px, 6vw, 64px);
+      font-weight: 400; letter-spacing: -0.03em; line-height: 1;
+      margin-bottom: 1.5rem;
+    }
+    h1 em { font-style: italic; color: var(--text2); }
+    .tagline {
+      font-size: 14px; color: var(--text2); line-height: 1.7;
+      max-width: 480px; border-left: 1px solid var(--border);
+      padding-left: 1.25rem;
+    }
+
+    .divider {
+      width: 100%; height: 0.5px; background: var(--border);
+      margin-bottom: 3rem;
+      opacity: 0; animation: rise 0.5s ease 0.2s forwards;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .card {
+      display: block; text-decoration: none; color: inherit;
+      background: var(--bg2); border: 0.5px solid var(--border);
+      border-radius: 4px; overflow: hidden;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s;
+      opacity: 0;
+    }
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+      border-color: rgba(0,0,0,0.18);
+    }
+
+    .card-preview {
+      width: 100%; aspect-ratio: 16/9;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--bg3);
+      border-bottom: 0.5px solid var(--border);
+      overflow: hidden;
+    }
+    .card-preview svg { width: 72%; height: 72%; }
+
+    .card-body { padding: 1.25rem 1.4rem 1rem; }
+    .card-label {
+      font-size: 10px; text-transform: uppercase;
+      letter-spacing: 0.12em; color: var(--text3); margin-bottom: 0.5rem;
+    }
+    .card-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px; font-weight: 400;
+      line-height: 1.3; margin-bottom: 0.6rem; letter-spacing: -0.01em;
+    }
+    .card-title em { font-style: italic; color: var(--text2); }
+    .card-desc { font-size: 12px; color: var(--text2); line-height: 1.65; }
+
+    .card-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.9rem 1.4rem;
+      border-top: 0.5px solid var(--border);
+      font-size: 11px; color: var(--text3);
+    }
+    .card-arrow { font-size: 14px; color: var(--text3); transition: transform 0.2s, color 0.2s; }
+    .card:hover .card-arrow { transform: translateX(3px); color: var(--text); }
+
+    .card.soon { pointer-events: none; }
+    .card.soon .card-preview { opacity: 0.35; }
+    .card.soon .card-body { opacity: 0.4; }
+    .card.soon .card-footer { opacity: 0.3; }
+
+    footer {
+      margin-top: 5rem; padding-top: 1.5rem;
+      border-top: 0.5px solid var(--border);
+      font-size: 11px; color: var(--text3); line-height: 1.7;
+      opacity: 0; animation: rise 0.5s ease 0.65s forwards;
+    }
+    footer a { color: var(--text3); }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .card:nth-child(1) { animation: rise 0.5s ease 0.28s forwards; }
+    .card:nth-child(2) { animation: rise 0.5s ease 0.38s forwards; }
+    .card:nth-child(3) { animation: rise 0.5s ease 0.48s forwards; }
+    .card:nth-child(4) { animation: rise 0.5s ease 0.58s forwards; }
+  </style>
+</head>
+<body>
+
+<button class="theme-toggle" id="theme-btn" title="toggle dark mode">☽</button>
+
+<div class="container">
+
+  <header>
+    <div class="eyebrow">Strictly Come Dancing · Series 10–22 · 2012–2024</div>
+    <h1>Strictly <em>data</em></h1>
+    <p class="tagline">Personal data project. Scores scraped from Wikipedia, people data from Wikidata.</p>
+  </header>
+
+  <div class="divider"></div>
+
+  <div class="cards">
+
+    <a class="card" href="judges.html">
+      <div class="card-preview">
+        <svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+          <line x1="10" y1="62" x2="178" y2="62" stroke="#a09d99" stroke-width="0.75" stroke-dasharray="3 3"/>
+          <polyline points="10,52 42,46 74,50 106,36 138,42 170,27"
+            fill="none" stroke="#AFA9EC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <polyline points="10,55 42,52 74,54 106,48 138,50 170,46"
+            fill="none" stroke="#5DCAA5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+          <polyline points="10,56 42,54 74,57 106,52 138,55 170,51"
+            fill="none" stroke="#F0997B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.75"/>
+          <polyline points="10,74 42,80 74,69 106,77 138,70 170,79"
+            fill="none" stroke="#AFA9EC" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+          <circle cx="170" cy="27" r="3.5" fill="#AFA9EC"/>
+          <circle cx="170" cy="46" r="3.5" fill="#5DCAA5"/>
+          <circle cx="170" cy="51" r="3.5" fill="#F0997B"/>
+          <circle cx="170" cy="79" r="3.5" fill="#AFA9EC" opacity="0.85"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="card-label">judge analysis</div>
+        <div class="card-title">Who's the harshest<br><em>judge on the dancefloor?</em></div>
+        <p class="card-desc">Deviation from panel mean across series 10–22, filterable by dance style.</p>
+      </div>
+      <div class="card-footer">
+        <span>series 10–22 · 7 judges</span>
+        <span class="card-arrow">→</span>
+      </div>
+    </a>
+
+    <a class="card" href="gender.html">
+      <div class="card-preview">
+        <svg viewBox="0 0 200 110" xmlns="http://www.w3.org/2000/svg">
+          <line x1="100" y1="8" x2="100" y2="102" stroke="#a09d99" stroke-width="0.75" stroke-dasharray="3 3"/>
+          <line x1="55"  y1="24"  x2="112" y2="24"  stroke="#a09d99" stroke-width="1.5"/>
+          <circle cx="55"  cy="24"  r="6.5" fill="#ED93B1" stroke="white" stroke-width="2"/>
+          <circle cx="112" cy="24"  r="6.5" fill="#85B7EB" stroke="white" stroke-width="2"/>
+          <line x1="82"  y1="46"  x2="116" y2="46"  stroke="#a09d99" stroke-width="1.5"/>
+          <circle cx="82"  cy="46"  r="6.5" fill="#ED93B1" stroke="white" stroke-width="2"/>
+          <circle cx="116" cy="46"  r="6.5" fill="#85B7EB" stroke="white" stroke-width="2"/>
+          <line x1="92"  y1="68"  x2="110" y2="68"  stroke="#a09d99" stroke-width="1.5"/>
+          <circle cx="92"  cy="68"  r="6.5" fill="#ED93B1" stroke="white" stroke-width="2"/>
+          <circle cx="110" cy="68"  r="6.5" fill="#85B7EB" stroke="white" stroke-width="2"/>
+          <line x1="96"  y1="90"  x2="104" y2="90"  stroke="#a09d99" stroke-width="1.5"/>
+          <circle cx="96"  cy="90"  r="6.5" fill="#ED93B1" stroke="white" stroke-width="2"/>
+          <circle cx="104" cy="90"  r="6.5" fill="#85B7EB" stroke="white" stroke-width="2"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="card-label">gender analysis</div>
+        <div class="card-title">Do judges score men and<br><em>women differently?</em></div>
+        <p class="card-desc">Per-series gender gap in scoring, broken down by judge.</p>
+      </div>
+      <div class="card-footer">
+        <span>series 10–22 · per series</span>
+        <span class="card-arrow">→</span>
+      </div>
+    </a>
+
+    <div class="card soon">
+      <div class="card-preview">
+        <svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg" style="opacity:0.3">
+          <circle cx="60"  cy="50" r="20" fill="none" stroke="#a09d99" stroke-width="1.5"/>
+          <circle cx="100" cy="50" r="20" fill="none" stroke="#a09d99" stroke-width="1.5"/>
+          <circle cx="140" cy="50" r="20" fill="none" stroke="#a09d99" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="card-label">coming soon</div>
+        <div class="card-title">More <em>to come</em></div>
+        <p class="card-desc">Score inflation over time, professional careers, age analysis…</p>
+      </div>
+      <div class="card-footer">
+        <span>in progress</span>
+        <span class="card-arrow">·</span>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    Data from <a href="https://en.wikipedia.org" target="_blank">Wikipedia</a> ·
+    <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank">CC BY-SA 4.0</a> ·
+    Person data from <a href="https://www.wikidata.org" target="_blank">Wikidata</a>
+  </footer>
+
+</div>
+
+<script>
+  function applyTheme(dark) {
+    document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+    document.getElementById("theme-btn").textContent = dark ? "☀" : "☽";
+  }
+  function toggleTheme() {
+    const dark = document.documentElement.getAttribute("data-theme") !== "dark";
+    localStorage.setItem("theme", dark ? "dark" : "light");
+    applyTheme(dark);
+  }
+  document.getElementById("theme-btn").onclick = toggleTheme;
+  (function() {
+    const saved = localStorage.getItem("theme");
+    const sysDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    applyTheme(saved ? saved === "dark" : sysDark);
+  })();
+</script>
+</body>
+</html>
