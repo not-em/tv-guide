@@ -93,6 +93,7 @@ COLUMNS: list[str] = [
     "professional",
     "week",
     "dance",
+    "dance_style",
     "song",
     "artist",
     "total_score",
@@ -281,6 +282,7 @@ def _make_empty_row(
         "professional": professional,
         "week": week_num,
         "dance": "",
+        "dance_style": "",
         "song": "",
         "artist": "",
         "total_score": None,
@@ -569,6 +571,71 @@ def parse_series_summary_only(series_num: int, soup: BeautifulSoup) -> list[dict
 
 
 # ---------------------------------------------------------------------------
+# Dance style classification
+# ---------------------------------------------------------------------------
+
+# Dances that belong to the Latin category on Strictly.
+_LATIN_DANCES: frozenset[str] = frozenset(
+    [
+        "Cha-Cha-Cha",
+        "Jive",
+        "Paso Doble",
+        "Rumba",
+        "Samba",
+        "Salsa",
+        "Argentine Tango",
+    ]
+)
+
+# Dances that belong to the Ballroom category on Strictly.
+_BALLROOM_DANCES: frozenset[str] = frozenset(
+    [
+        "Waltz",
+        "Viennese Waltz",
+        "Foxtrot",
+        "Quickstep",
+        "Tango",
+        "American Smooth",
+    ]
+)
+
+
+def _classify_dance_style(dance: str) -> str:
+    """Return ``"Latin"``, ``"Ballroom"``, or ``"Other"`` for a dance string.
+
+    Rules applied in order:
+
+    1. If *dance* contains ``"marathon"`` (case-insensitive), return ``"Other"``.
+    2. If *dance* contains ``"&"``, classify by the first named dance only.
+    3. Look up the (title-cased) dance name in the Latin / Ballroom sets.
+    4. Fall back to ``"Other"`` for anything unrecognised (e.g. Showdance,
+       Contemporary, Couple's Choice, Charleston, Street/Commercial,
+       Theatre/Jazz, Lindy Hop, Swing).
+
+    Args:
+        dance: The dance name string, already title-cased.
+
+    Returns:
+        One of ``"Latin"``, ``"Ballroom"``, or ``"Other"``.
+    """
+    if not dance:
+        return "Other"
+
+    # Rule 1 – anything Marathon-flavoured is Other regardless of base dance.
+    if "marathon" in dance.lower():
+        return "Other"
+
+    # Rule 2 – compound dances: classify by the first dance only.
+    base = dance.split("&")[0].strip()
+
+    if base in _LATIN_DANCES:
+        return "Latin"
+    if base in _BALLROOM_DANCES:
+        return "Ballroom"
+    return "Other"
+
+
+# ---------------------------------------------------------------------------
 # DataFrame post-processing
 # ---------------------------------------------------------------------------
 
@@ -596,6 +663,7 @@ def _build_dataframe(all_rows: list[dict]) -> pd.DataFrame:
         df[judge] = pd.to_numeric(df[judge], errors="coerce")
 
     df["dance"] = df["dance"].str.title()
+    df["dance_style"] = df["dance"].apply(_classify_dance_style)
 
     return df
 
