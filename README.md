@@ -1,4 +1,4 @@
-# reality-data
+# tv-guide
 
 Historical data scraped from Wikipedia for British reality and competition TV shows.
 
