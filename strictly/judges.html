@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Strictly — judge scoring patterns</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #f7f5f0;
+      --bg2:      #efecea;
+      --text:     #1c1a17;
+      --text2:    #6b6760;
+      --text3:    #a09d99;
+      --border:   rgba(0,0,0,0.09);
+      --craig:    #AFA9EC;
+      --darcey:   #5DCAA5;
+      --len:      #F0997B;
+      --bruno:    #E8B86D;
+      --shirley:  #85B7EB;
+      --motsi:    #ED93B1;
+      --anton:    #97C459;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg:    #1a1917; --bg2: #242220;
+        --text:  #f0ede8; --text2: #a09d99; --text3: #6b6760;
+        --border: rgba(255,255,255,0.09);
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg:    #1a1917; --bg2: #242220;
+      --text:  #f0ede8; --text2: #a09d99; --text3: #6b6760;
+      --border: rgba(255,255,255,0.09);
+    }
+
+    .theme-toggle {
+      position: fixed;
+      top: 1.25rem; right: 1.25rem;
+      background: var(--bg2);
+      border: 0.5px solid var(--border);
+      border-radius: 50%;
+      width: 36px; height: 36px;
+      cursor: pointer;
+      font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s;
+      z-index: 10;
+    }
+    .theme-toggle:hover { background: var(--border); }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      min-height: 100vh;
+      padding: 3rem 2rem 5rem;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 3rem;
+      border-bottom: 0.5px solid var(--border);
+      padding-bottom: 2rem;
+    }
+
+    .eyebrow {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--text3);
+      margin-bottom: 0.75rem;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 400;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      margin-bottom: 1rem;
+      color: var(--text);
+    }
+
+    h1 em {
+      font-style: italic;
+      color: var(--text2);
+    }
+
+    .subtitle {
+      font-size: 15px;
+      color: var(--text2);
+      line-height: 1.6;
+      max-width: 560px;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 2rem;
+    }
+
+    .control-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text3);
+      margin-right: 4px;
+    }
+
+    .btn {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 400;
+      padding: 6px 16px;
+      border-radius: 20px;
+      border: 0.5px solid var(--border);
+      background: transparent;
+      color: var(--text2);
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.02em;
+    }
+    .btn:hover { background: var(--bg2); color: var(--text); }
+    .btn.active {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+    }
+
+    #chart-wrap {
+      position: relative;
+      width: 100%;
+    }
+
+    svg {
+      width: 100%;
+      overflow: visible;
+    }
+
+    .grid line {
+      stroke: var(--border);
+      stroke-width: 0.5;
+    }
+    .grid path { display: none; }
+
+    .axis text {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      fill: var(--text3);
+      font-weight: 300;
+    }
+    .axis path, .axis line {
+      stroke: var(--border);
+    }
+    .axis .domain { display: none; }
+
+    .zero-line {
+      stroke: var(--text3);
+      stroke-width: 0.5;
+      stroke-dasharray: 3 4;
+    }
+
+    .line-path {
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transition: opacity 0.2s;
+    }
+
+    .dot {
+      stroke: var(--bg);
+      stroke-width: 1.5;
+      cursor: pointer;
+      transition: r 0.15s;
+    }
+    .dot:hover { r: 6; }
+
+    .line-label {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+      paint-order: stroke;
+      stroke: var(--bg);
+      stroke-width: 4px;
+      cursor: default;
+    }
+
+    .zero-label {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 10px;
+      fill: var(--text3);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    /* Tooltip */
+    .tooltip {
+      position: absolute;
+      background: white;
+      border: 0.5px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 12px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.1s;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      max-width: 180px;
+    }
+    .tooltip.visible { opacity: 1; }
+    .tooltip-name {
+      font-weight: 500;
+      margin-bottom: 3px;
+      font-size: 13px;
+    }
+    .tooltip-series {
+      color: var(--text3);
+      font-size: 11px;
+      margin-bottom: 6px;
+    }
+    .tooltip-value {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      font-weight: 400;
+    }
+    .tooltip-sub {
+      font-size: 10px;
+      color: var(--text3);
+      margin-top: 2px;
+    }
+
+    footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 0.5px solid var(--border);
+      font-size: 11px;
+      color: var(--text3);
+      line-height: 1.7;
+    }
+    footer a { color: var(--text3); }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .container { animation: fadeIn 0.5s ease both; }
+  </style>
+</head>
+<body>
+<button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="toggle dark mode">☽</button>
+<div class="container">
+
+  <header>
+    <div class="eyebrow">Strictly Come Dancing · Series 10–22 · 2012–2024</div>
+    <h1>Who's the harshest<br><em>judge on the dancefloor?</em></h1>
+    <p class="subtitle" id="subtitle">Average deviation from the panel mean score, per series. A positive value means the judge scored higher than their colleagues on the same performance; negative means lower.</p>
+  </header>
+
+  <div class="controls">
+    <span class="control-label">view</span>
+    <button class="btn active" id="btn-dev">deviation from mean</button>
+    <button class="btn" id="btn-share">share of total score</button>
+  </div>
+  <div class="controls" style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
+    <span class="control-label">style</span>
+    <button class="btn active" id="btn-all">all dances</button>
+    <button class="btn" id="btn-latin">latin</button>
+    <button class="btn" id="btn-ballroom">ballroom</button>
+  </div>
+
+  <div id="chart-wrap">
+    <svg id="chart"></svg>
+    <div class="tooltip" id="tooltip"></div>
+  </div>
+
+  <footer>
+    Data scraped from Wikipedia and used for personal analysis only. Source pages available at
+    <a href="https://en.wikipedia.org/wiki/Strictly_Come_Dancing_series_10" target="_blank">wikipedia.org</a>.
+    Data is licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank">CC BY-SA 4.0</a>.
+  </footer>
+
+</div>
+
+<script>
+const COLOURS = {
+  craig:   "#AFA9EC",
+  darcey:  "#5DCAA5",
+  len:     "#F0997B",
+  bruno:   "#E8B86D",
+  shirley: "#85B7EB",
+  motsi:   "#ED93B1",
+  anton:   "#97C459",
+};
+
+const LABELS = {
+  craig:   "Craig Revel Horwood",
+  darcey:  "Darcey Bussell",
+  len:     "Len Goodman",
+  bruno:   "Bruno Tonioli",
+  shirley: "Shirley Ballas",
+  motsi:   "Motsi Mabuse",
+  anton:   "Anton Du Beke",
+};
+
+const judges = ["craig","darcey","len","bruno","shirley","motsi","anton"];
+
+// Which metric to show
+let currentView = "dev";
+let currentStyle = "all";
+
+// Margin
+const margin = { top: 20, right: 120, bottom: 50, left: 50 };
+
+const wrap   = document.getElementById("chart-wrap");
+const svgEl  = document.getElementById("chart");
+const tip    = document.getElementById("tooltip");
+
+// Theme — must be outside async block so button works immediately
+function applyTheme(dark) {
+  document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+  document.getElementById("theme-btn").textContent = dark ? "☀" : "☽";
+}
+function toggleTheme() {
+  const dark = document.documentElement.getAttribute("data-theme") !== "dark";
+  localStorage.setItem("theme", dark ? "dark" : "light");
+  applyTheme(dark);
+}
+(function() {
+  const saved = localStorage.getItem("theme");
+  const sysDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  applyTheme(saved ? saved === "dark" : sysDark);
+})();
+
+d3.csv("strictly_scores.csv", d3.autoType).then(raw => {
+
+  // Compute panel mean per row
+  raw.forEach(d => {
+    const vals = judges.map(j => d[j]).filter(v => v != null && !isNaN(v));
+    d.panel_mean = vals.length ? d3.mean(vals) : null;
+    judges.forEach(j => {
+      d[`${j}_dev`]   = (d[j] != null && d.panel_mean != null) ? d[j] - d.panel_mean : null;
+      d[`${j}_share`] = (d[j] != null && d.total_score) ? d[j] / d.total_score : null;
+    });
+  });
+
+  // Aggregate by judge × series, optionally filtered by dance_style
+  function aggregate(styleFilter) {
+    const filtered = styleFilter === "all"
+      ? raw
+      : raw.filter(d => d.dance_style && d.dance_style.toLowerCase() === styleFilter);
+    const result = [];
+    judges.forEach(judge => {
+      const bySeries = d3.group(filtered, d => d.series);
+      bySeries.forEach((rows, series) => {
+        const devVals   = rows.map(r => r[`${judge}_dev`]).filter(v => v != null);
+        const shareVals = rows.map(r => r[`${judge}_share`]).filter(v => v != null);
+        if (devVals.length < 3) return;
+        result.push({
+          judge,
+          series: +series,
+          mean_dev:   d3.mean(devVals),
+          mean_share: d3.mean(shareVals),
+          n: devVals.length,
+        });
+      });
+    });
+    return result;
+  }
+
+  let nested  = aggregate("all");
+  let byJudge = d3.group(nested, d => d.judge);
+
+  // Get rendered width
+  const W = wrap.clientWidth;
+  const H = Math.min(480, W * 0.55);
+  const w = W - margin.left - margin.right;
+  const h = H - margin.top  - margin.bottom;
+
+  svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svgEl.setAttribute("height", H);
+
+  const svg = d3.select("#chart")
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  // Scales
+  const allSeries = [...new Set(nested.map(d => d.series))].sort(d3.ascending);
+
+  const x = d3.scalePoint()
+    .domain(allSeries)
+    .range([0, w])
+    .padding(0.3);
+
+  // We'll set y domain dynamically
+  function yDomain(view) {
+    const vals = nested.map(d => view === "dev" ? d.mean_dev : d.mean_share * 100);
+    const ext  = d3.extent(vals);
+    const pad  = (ext[1] - ext[0]) * 0.18;
+    return [ext[0] - pad, ext[1] + pad];
+  }
+
+  const y = d3.scaleLinear().range([h, 0]);
+
+  // Grid
+  const gridG = svg.append("g").attr("class", "grid");
+
+  // Zero line (deviation view only)
+  const zeroLine = svg.append("line")
+    .attr("class", "zero-line")
+    .attr("x1", 0).attr("x2", w);
+
+  const zeroLabel = svg.append("text")
+    .attr("class", "zero-label")
+    .attr("x", w + 6)
+    .attr("text-anchor", "start");
+
+  // Axes
+  const xAxisG = svg.append("g")
+    .attr("class", "axis")
+    .attr("transform", `translate(0,${h})`);
+
+  const yAxisG = svg.append("g").attr("class", "axis");
+
+  // Lines group
+  const linesG = svg.append("g");
+
+  // Dots group
+  const dotsG = svg.append("g");
+
+  // Labels group
+  const labelsG = svg.append("g");
+
+  // Line generator
+  const lineGen = d3.line()
+    .x(d => x(d.series))
+    .y(d => y(currentView === "dev" ? d.mean_dev : d.mean_share * 100))
+    .curve(d3.curveCatmullRom.alpha(0.5))
+    .defined(d => d.mean_dev != null);
+
+  function draw(view, animate) {
+    const dom = yDomain(view);
+    y.domain(dom);
+
+    // Grid
+    gridG.selectAll("*").remove();
+    gridG.call(
+      d3.axisLeft(y).ticks(5).tickSize(-w).tickFormat("")
+    );
+
+    // Zero line
+    if (view === "dev") {
+      zeroLine
+        .attr("y1", y(0)).attr("y2", y(0))
+        .attr("opacity", 1);
+      zeroLabel
+        .attr("y", y(0) + 4)
+        .text("panel mean")
+        .attr("opacity", 1);
+    } else {
+      zeroLine.attr("opacity", 0);
+      zeroLabel.attr("opacity", 0);
+    }
+
+    // X axis
+    xAxisG.call(
+      d3.axisBottom(x).tickFormat(d => `${d}`)
+    );
+    xAxisG.selectAll("text")
+      .style("font-family", "'DM Sans', sans-serif")
+      .style("font-size", "11px");
+
+    // Y axis
+    yAxisG.call(
+      d3.axisLeft(y).ticks(5)
+        .tickFormat(d => view === "dev"
+          ? (d > 0 ? `+${d.toFixed(2)}` : d.toFixed(2))
+          : `${d.toFixed(1)}%`
+        )
+    );
+    yAxisG.selectAll("text")
+      .style("font-family", "'DM Sans', sans-serif")
+      .style("font-size", "11px");
+
+    // Lines
+    const lines = linesG.selectAll(".line-path")
+      .data([...byJudge.entries()], ([judge]) => judge);
+
+    lines.enter()
+      .append("path")
+      .attr("class", "line-path")
+      .attr("stroke", ([judge]) => COLOURS[judge])
+      .merge(lines)
+      .transition().duration(animate ? 500 : 0).ease(d3.easeCubicInOut)
+      .attr("d", ([, rows]) => lineGen(rows.sort((a,b) => a.series - b.series)));
+
+    lines.exit().remove();
+
+    // Dots
+    const allPoints = nested;
+    const dots = dotsG.selectAll(".dot")
+      .data(allPoints, d => `${d.judge}-${d.series}`);
+
+    dots.enter()
+      .append("circle")
+      .attr("class", "dot")
+      .attr("r", 4)
+      .attr("fill", d => COLOURS[d.judge])
+      .attr("cx", d => x(d.series))
+      .on("mousemove", function(event, d) {
+        const val = view === "dev" ? d.mean_dev : d.mean_share * 100;
+        const fmt = view === "dev"
+          ? (val > 0 ? `+${val.toFixed(3)}` : val.toFixed(3))
+          : `${val.toFixed(1)}%`;
+        const sub = view === "dev"
+          ? "avg. deviation from panel mean"
+          : "avg. share of total score";
+        tip.innerHTML = `
+          <div class="tooltip-name" style="color:${COLOURS[d.judge]}">${LABELS[d.judge]}</div>
+          <div class="tooltip-series">Series ${d.series} · ${d.n} performances</div>
+          <div class="tooltip-value">${fmt}</div>
+          <div class="tooltip-sub">${sub}</div>
+        `;
+        tip.classList.add("visible");
+        const rect = wrap.getBoundingClientRect();
+        const ex = event.clientX - rect.left;
+        const ey = event.clientY - rect.top;
+        tip.style.left = (ex + 12) + "px";
+        tip.style.top  = (ey - 40) + "px";
+      })
+      .on("mouseleave", () => tip.classList.remove("visible"))
+      .merge(dots)
+      .transition().duration(animate ? 500 : 0).ease(d3.easeCubicInOut)
+      .attr("cy", d => y(view === "dev" ? d.mean_dev : d.mean_share * 100));
+
+    dots.exit().remove();
+
+    // End-of-line labels — rightmost series per judge
+    const lastPoints = judges.map(judge => {
+      const pts = [...(byJudge.get(judge) || [])].sort((a,b) => b.series - a.series);
+      return pts[0] ? { judge, ...pts[0] } : null;
+    }).filter(Boolean);
+
+    const lbls = labelsG.selectAll(".line-label")
+      .data(lastPoints, d => d.judge);
+
+    lbls.enter()
+      .append("text")
+      .attr("class", "line-label")
+      .attr("x", d => x(d.series) + 12)
+      .attr("fill", d => COLOURS[d.judge])
+      .text(d => LABELS[d.judge].split(" ")[0]) // first name only
+      .merge(lbls)
+      .transition().duration(animate ? 500 : 0).ease(d3.easeCubicInOut)
+      .attr("y", d => y(view === "dev" ? d.mean_dev : d.mean_share * 100) + 4);
+
+    lbls.exit().remove();
+  }
+
+  function redraw(animate) {
+    nested  = aggregate(currentStyle);
+    byJudge = d3.group(nested, d => d.judge);
+    draw(currentView, animate);
+  }
+
+  // Initial draw
+  redraw(false);
+
+  // Buttons
+  const SUBTITLES = {
+    dev:   "Average deviation from the panel mean score, per series. A positive value means the judge scored higher than their colleagues on the same performance; negative means lower.",
+    share: "Each judge's score as a percentage of the total panel score, averaged per series. Equal contribution would be 25% across a four-judge panel.",
+  };
+
+  document.getElementById("btn-dev").addEventListener("click", () => {
+    currentView = "dev";
+    document.getElementById("btn-dev").classList.add("active");
+    document.getElementById("btn-share").classList.remove("active");
+    document.getElementById("subtitle").textContent = SUBTITLES.dev;
+    redraw(true);
+  });
+
+  document.getElementById("btn-share").addEventListener("click", () => {
+    currentView = "share";
+    document.getElementById("btn-share").classList.add("active");
+    document.getElementById("btn-dev").classList.remove("active");
+    document.getElementById("subtitle").textContent = SUBTITLES.share;
+    redraw(true);
+  });
+
+  // Style filter buttons
+  ["all","latin","ballroom"].forEach(style => {
+    document.getElementById(`btn-${style}`).addEventListener("click", () => {
+      currentStyle = style;
+      ["all","latin","ballroom"].forEach(s =>
+        document.getElementById(`btn-${s}`).classList.toggle("active", s === style)
+      );
+      redraw(true);
+    });
+  });
+
+}).catch(err => {
+  document.getElementById("chart-wrap").innerHTML =
+    `<p style="color:#F0997B;font-size:13px;">Could not load strictly_scores.csv — make sure you're running a local server (<code>python -m http.server</code>) and the CSV is in the same folder.</p>`;
+  console.error(err);
+});
+</script>
+</body>
+</html>
