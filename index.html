@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>tv-guide</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -32,7 +32,8 @@
       min-height: 100vh;
       display: grid;
       grid-template-rows: 1fr auto;
-      padding: 0 2rem;
+      padding: 0 1.25rem;
+      overflow-x: hidden;
     }
 
     .theme-toggle {
@@ -50,7 +51,7 @@
       max-width: 680px;
       margin: 0 auto;
       width: 100%;
-      padding: 6rem 0 4rem;
+      padding: 4rem 0 3rem;
       opacity: 0;
       animation: rise 0.7s ease 0.1s forwards;
     }
@@ -62,12 +63,12 @@
     }
 
     h1 {
-      font-family: 'Playfair Display', serif;
-      font-size: clamp(44px, 7vw, 76px);
-      font-weight: 400; letter-spacing: -0.03em;
+      font-family: 'DM Sans', sans-serif;
+      font-size: clamp(36px, 7vw, 72px);
+      font-weight: 500; letter-spacing: -0.03em;
       line-height: 1; margin-bottom: 0.3rem;
     }
-    h1 em { font-style: italic; color: var(--text2); }
+    h1 em { font-style: normal; color: var(--text2); }
 
     .strapline {
       font-size: 14px; color: var(--text3);
@@ -107,15 +108,15 @@
     .show-left { display: flex; align-items: baseline; gap: 1.2rem; flex: 1; min-width: 0; }
 
     .show-name {
-      font-family: 'Playfair Display', serif;
-      font-size: clamp(20px, 3vw, 26px);
-      font-weight: 400;
+      font-family: 'DM Sans', sans-serif;
+      font-size: clamp(18px, 3vw, 24px);
+      font-weight: 500;
       letter-spacing: -0.02em;
       color: var(--text2);
       transition: color 0.2s;
       white-space: nowrap;
     }
-    .show-name em { font-style: italic; }
+    .show-name em { font-style: normal; }
 
     .show-meta {
       font-size: 12px;
@@ -128,8 +129,13 @@
       color: var(--text3);
       text-align: right;
       flex-shrink: 0;
-      max-width: 200px;
+      max-width: 180px;
       line-height: 1.5;
+    }
+
+    @media (max-width: 480px) {
+      .show-desc { display: none; }
+      .show-link { gap: 0.5rem; }
     }
 
     .show-arrow {

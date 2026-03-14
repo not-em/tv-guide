@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Strictly — judge scoring patterns</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -59,13 +59,25 @@
       font-family: 'DM Sans', sans-serif;
       font-weight: 300;
       min-height: 100vh;
-      padding: 3rem 2rem 5rem;
+      padding: 3rem 1.25rem 5rem;
+      overflow-x: hidden;
     }
 
     .container {
       max-width: 900px;
       margin: 0 auto;
     }
+
+    .back-link {
+      display: inline-block;
+      font-size: 12px;
+      color: var(--text3);
+      text-decoration: none;
+      letter-spacing: 0.04em;
+      margin-bottom: 1.5rem;
+      transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--text); }
 
     header {
       margin-bottom: 3rem;
@@ -82,9 +94,9 @@
     }
 
     h1 {
-      font-family: 'Playfair Display', serif;
-      font-size: clamp(28px, 4vw, 42px);
-      font-weight: 400;
+      font-family: 'DM Sans', sans-serif;
+      font-size: clamp(22px, 4vw, 38px);
+      font-weight: 500;
       line-height: 1.2;
       letter-spacing: -0.02em;
       margin-bottom: 1rem;
@@ -92,7 +104,7 @@
     }
 
     h1 em {
-      font-style: italic;
+      font-style: normal;
       color: var(--text2);
     }
 
@@ -108,6 +120,7 @@
       align-items: center;
       gap: 8px;
       margin-bottom: 2rem;
+      flex-wrap: wrap;
     }
 
     .control-label {
@@ -208,9 +221,9 @@
     /* Tooltip */
     .tooltip {
       position: absolute;
-      background: white;
+      background: var(--bg);
       border: 0.5px solid var(--border);
-      border-radius: 8px;
+      border-radius: 6px;
       padding: 10px 14px;
       font-size: 12px;
       pointer-events: none;
@@ -231,9 +244,9 @@
       margin-bottom: 6px;
     }
     .tooltip-value {
-      font-family: 'Playfair Display', serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 18px;
-      font-weight: 400;
+      font-weight: 500;
     }
     .tooltip-sub {
       font-size: 10px;
@@ -256,6 +269,12 @@
       to   { opacity: 1; transform: translateY(0); }
     }
     .container { animation: fadeIn 0.5s ease both; }
+
+    @media (max-width: 600px) {
+      .axis text { font-size: 9px; }
+      .line-label { display: none; }
+      .zero-label { display: none; }
+    }
   </style>
 </head>
 <body>
@@ -263,6 +282,7 @@
 <div class="container">
 
   <header>
+    <a class="back-link" href="index.html">← strictly</a>
     <div class="eyebrow">Strictly Come Dancing · Series 10–22 · 2012–2024</div>
     <h1>Who's the harshest<br><em>judge on the dancefloor?</em></h1>
     <p class="subtitle" id="subtitle">Average deviation from the panel mean score, per series. A positive value means the judge scored higher than their colleagues on the same performance; negative means lower.</p>
@@ -321,7 +341,8 @@ let currentView = "dev";
 let currentStyle = "all";
 
 // Margin
-const margin = { top: 20, right: 120, bottom: 50, left: 50 };
+const isMobile = window.innerWidth <= 600;
+const margin = { top: 20, right: isMobile ? 16 : 120, bottom: 50, left: isMobile ? 36 : 50 };
 
 const wrap   = document.getElementById("chart-wrap");
 const svgEl  = document.getElementById("chart");
@@ -536,8 +557,9 @@ d3.csv("strictly_scores.csv", d3.autoType).then(raw => {
         const rect = wrap.getBoundingClientRect();
         const ex = event.clientX - rect.left;
         const ey = event.clientY - rect.top;
-        tip.style.left = (ex + 12) + "px";
-        tip.style.top  = (ey - 40) + "px";
+        const tipW = tip.offsetWidth || 180;
+        tip.style.left = (ex + 12 + tipW > rect.width ? ex - tipW - 12 : ex + 12) + "px";
+        tip.style.top  = (ey + 12) + "px";
       })
       .on("mouseleave", () => tip.classList.remove("visible"))
       .merge(dots)
@@ -618,3 +640,4 @@ d3.csv("strictly_scores.csv", d3.autoType).then(raw => {
 </script>
 </body>
 </html>
+
