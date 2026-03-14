@@ -151,6 +151,7 @@
     .results-sort {
       font-size: 11px; color: var(--text3);
       display: flex; align-items: center; gap: 0.5rem;
+      flex-wrap: wrap;
     }
     .sort-btn {
       font-family: 'DM Sans', sans-serif;
@@ -212,7 +213,10 @@
     .td-bar-wrap {
       width: 80px; padding-right: 0;
     }
-    @media (max-width: 540px) { .td-bar-wrap { display: none; } }
+    @media (max-width: 540px) {
+      .td-bar-wrap { display: none; }
+      .td-pro { display: none; }
+    }
     .td-bar-bg {
       height: 3px; background: var(--bg3); border-radius: 2px; overflow: hidden;
     }
@@ -290,7 +294,8 @@
   <footer>
     Data scraped from Wikipedia ·
     <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank">CC BY-SA 4.0</a> ·
-    Person data from <a href="https://www.wikidata.org" target="_blank">Wikidata</a>
+    Person data from <a href="https://www.wikidata.org" target="_blank">Wikidata</a> ·
+    <a href="https://github.com/not-em/tv-guide" target="_blank">GitHub</a>
   </footer>
 </div>
 
@@ -551,7 +556,7 @@ function renderResults(rows) {
         <th class="td-rank">#</th>
         <th>celebrity</th>
         <th>dance</th>
-        <th>pro</th>
+        <th class="td-pro">pro</th>
         <th class="num">series · wk</th>
         <th class="num">score</th>
         <th class="td-bar-wrap"></th>
@@ -569,7 +574,7 @@ function renderResults(rows) {
       <td class="td-rank">${i + 1}</td>
       <td class="td-celeb">${row.celebrity}</td>
       <td class="td-dance">${row.dance}</td>
-      <td>${row.professional}</td>
+      <td class="td-pro">${row.professional}</td>
       <td class="num">${row.series} · ${row.week}</td>
       <td class="td-score">${row.total_score}<span class="score-max"> /${row.max_score}</span></td>
       <td class="td-bar-wrap"><div class="td-bar-bg"><div class="td-bar-fill" style="width:${barPct.toFixed(1)}%"></div></div></td>
