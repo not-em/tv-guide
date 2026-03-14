@@ -2,15 +2,17 @@
 """
 strictly/scraper.py
 
-Scrapes per-week scores from Wikipedia for Strictly Come Dancing series 10–22
+Scrapes per-week scores from Wikipedia for Strictly Come Dancing series 1–24
 and writes a single tidy CSV: strictly_scores.csv
 
 Series–year mapping
 -------------------
-Series 10 → 2012   Series 14 → 2016   Series 18 → 2020   Series 22 → 2024
-Series 11 → 2013   Series 15 → 2017   Series 19 → 2021
-Series 12 → 2014   Series 16 → 2018   Series 20 → 2022
-Series 13 → 2015   Series 17 → 2019   Series 21 → 2023
+Series 1  → 2004   Series 7  → 2009   Series 13 → 2015   Series 19 → 2021
+Series 2  → 2005   Series 8  → 2010   Series 14 → 2016   Series 20 → 2022
+Series 3  → 2005   Series 9  → 2011   Series 15 → 2017   Series 21 → 2023
+Series 4  → 2006   Series 10 → 2012   Series 16 → 2018   Series 22 → 2024
+Series 5  → 2007   Series 11 → 2013   Series 17 → 2019   Series 23 → 2025
+Series 6  → 2008   Series 12 → 2014   Series 18 → 2020   Series 24 → 2026
 
 Output columns
 --------------
@@ -75,23 +77,29 @@ from bs4 import BeautifulSoup
 # Configuration
 # ---------------------------------------------------------------------------
 
-SERIES: list[int] = list(range(10, 23))  # series 10–22 inclusive
+SERIES: list[int] = list(range(1, 24))  # series 1–23 inclusive (series 24 not yet aired)
 
 WIKI_URL = "https://en.wikipedia.org/wiki/Strictly_Come_Dancing_series_{}"
 
 # ---- Judge panels --------------------------------------------------------
-_JUDGES_EARLY = ["craig", "darcey", "len", "bruno"]
-
 JUDGES_BY_SERIES: dict[int, list[str]] = {
-    **{s: list(_JUDGES_EARLY) for s in range(10, 16)},
+    # Series 1–6: Craig, Len, Bruno, Arlene
+    **{s: ["craig", "len", "bruno", "arlene"] for s in range(1, 7)},
+    # Series 7–9: Craig, Len, Bruno, Alesha (Arlene replaced by Alesha in series 7)
+    **{s: ["craig", "len", "bruno", "alesha"] for s in range(7, 10)},
+    # Series 10–15: Craig, Darcey, Len, Bruno (Alesha replaced by Darcey in series 10)
+    **{s: ["craig", "darcey", "len", "bruno"] for s in range(10, 16)},
     16: ["craig", "darcey", "shirley", "bruno"],
     17: ["craig", "darcey", "shirley", "motsi", "bruno"],
     18: ["craig", "shirley", "motsi", "bruno"],
     19: ["craig", "shirley", "motsi", "anton", "bruno"],
-    **{s: ["craig", "shirley", "motsi", "anton"] for s in range(20, 23)},
+    **{s: ["craig", "shirley", "motsi", "anton"] for s in range(20, 24)},
 }
 
-ALL_JUDGES: list[str] = ["craig", "darcey", "len", "bruno", "shirley", "motsi", "anton"]
+ALL_JUDGES: list[str] = [
+    "craig", "len", "bruno", "arlene", "alesha",
+    "darcey", "shirley", "motsi", "anton",
+]
 
 # ---- Output schema -------------------------------------------------------
 COLUMNS: list[str] = [
@@ -121,6 +129,15 @@ OUT_FILE = _HERE / "strictly_scores.csv"
 
 # ---- Series première dates (for age calculation) -------------------------
 SERIES_START_DATES: dict[int, date] = {
+    1: date(2004, 5, 15),
+    2: date(2004, 9, 20),
+    3: date(2005, 9, 10),
+    4: date(2006, 9, 2),
+    5: date(2007, 9, 8),
+    6: date(2008, 9, 6),
+    7: date(2009, 9, 5),
+    8: date(2010, 9, 4),
+    9: date(2011, 9, 10),
     10: date(2012, 9, 15),
     11: date(2013, 9, 7),
     12: date(2014, 9, 6),
@@ -134,6 +151,7 @@ SERIES_START_DATES: dict[int, date] = {
     20: date(2022, 9, 17),
     21: date(2023, 9, 16),
     22: date(2024, 9, 14),
+    23: date(2025, 9, 13),
 }
 
 # ---- Network -------------------------------------------------------------
@@ -372,21 +390,35 @@ def _age_at(dob: str, on_date: date) -> Optional[float]:
 
 def _parse_couples_section(
     soup: BeautifulSoup,
-) -> tuple[dict[str, str], dict[str, str], dict[str, str], dict[str, str]]:
-    """Parse the Couples table, returning name maps and Wikipedia slug maps.
+) -> tuple[dict[str, str], dict[str, str], dict[str, str], dict[str, str], dict[str, str]]:
+    """Parse the Couples table, returning name maps, slug maps, and a verdict map.
 
     Returns:
-        ``(celeb_names, pro_names, celeb_slugs, pro_slugs)`` where:
+        ``(celeb_names, pro_names, celeb_slugs, pro_slugs, celeb_verdicts)`` where:
 
-        - ``celeb_names``  ``{short_key -> full_name}``
-        - ``pro_names``    ``{short_key -> full_name}``
-        - ``celeb_slugs``  ``{full_name -> wikipedia_slug}``
-        - ``pro_slugs``    ``{full_name -> wikipedia_slug}``
+        - ``celeb_names``    ``{short_key -> full_name}``
+        - ``pro_names``      ``{short_key -> full_name}``
+        - ``celeb_slugs``    ``{full_name -> wikipedia_slug}``
+        - ``pro_slugs``      ``{full_name -> wikipedia_slug}``
+        - ``celeb_verdicts`` ``{celeb_full_name -> verdict}`` derived from the
+                             Status column; used for series that lack a Result
+                             column in their week tables.
     """
     celeb_names: dict[str, str] = {}
     pro_names: dict[str, str] = {}
     celeb_slugs: dict[str, str] = {}
     pro_slugs: dict[str, str] = {}
+    celeb_verdicts: dict[str, str] = {}
+
+    # Status text patterns → verdict strings
+    _STATUS_RE = [
+        (re.compile(r"winner", re.I),      "winner"),
+        (re.compile(r"runner", re.I),      "runner-up"),
+        (re.compile(r"third\s*place", re.I), "runner-up"),
+        (re.compile(r"fourth\s*place", re.I), "runner-up"),
+        (re.compile(r"withdrew", re.I),    "eliminated"),
+        (re.compile(r"eliminated", re.I),  "eliminated"),
+    ]
 
     for tag in soup.find_all(["h2", "h3", "h4"]):
         if clean(tag.get_text()) != "Couples":
@@ -402,7 +434,7 @@ def _parse_couples_section(
                 continue
 
             celeb_full = clean(cells[0].get_text())
-            pro_raw = clean(cells[2].get_text())
+            pro_cell = cells[2]
 
             if not celeb_full or celeb_full.lower() in ("celebrity", "couple"):
                 continue
@@ -417,26 +449,39 @@ def _parse_couples_section(
                 if href.startswith("/wiki/") and ":" not in href:
                     celeb_slugs[celeb_full] = href[len("/wiki/"):]
 
-            # Professional name key(s) + slug(s)
-            # Build a map of link text -> slug from the pro cell's <a> tags.
-            pro_link_map: dict[str, str] = {}
-            for a in cells[2].find_all("a", href=True):
-                href = a["href"]
-                if href.startswith("/wiki/") and ":" not in href:
-                    pro_link_map[a.get_text().strip()] = href[len("/wiki/"):]
+            # Professional — take the FIRST linked name to handle mid-series swaps
+            # (e.g. "Artem ChigvintsevBrendan Cole (Week 7)")
+            pro_links = [
+                a for a in pro_cell.find_all("a", href=True)
+                if a["href"].startswith("/wiki/") and ":" not in a["href"]
+            ]
+            if pro_links:
+                first_link = pro_links[0]
+                pro_full = first_link.get_text().strip()
+                pro_slug = first_link["href"][len("/wiki/"):]
+            else:
+                # No links — fall back to raw text (take up to first bracket/comma)
+                pro_raw = clean(pro_cell.get_text())
+                pro_full = re.split(r"[,(]", pro_raw)[0].strip()
+                pro_slug = ""
 
-            for segment in re.split(r"\s*\([^)]*\)\s*", pro_raw):
-                pro_full = segment.strip()
-                if not pro_full:
-                    continue
+            if pro_full:
                 pro_key = pro_full.split()[0]
                 pro_names[pro_key] = pro_full
-                if pro_full in pro_link_map:
-                    pro_slugs[pro_full] = pro_link_map[pro_full]
+                if pro_slug:
+                    pro_slugs[pro_full] = pro_slug
+
+            # Verdict from status column (col 3 if present)
+            if len(cells) >= 4:
+                status_text = clean(cells[3].get_text())
+                for pat, verdict in _STATUS_RE:
+                    if pat.search(status_text):
+                        celeb_verdicts[celeb_full] = verdict
+                        break
 
         break
 
-    return celeb_names, pro_names, celeb_slugs, pro_slugs
+    return celeb_names, pro_names, celeb_slugs, pro_slugs, celeb_verdicts
 
 
 # ---------------------------------------------------------------------------
@@ -449,8 +494,8 @@ def parse_series(
 ) -> tuple[list[dict], dict[str, str], dict[str, str]]:
     """Parse scores from a series page; also return celeb/pro slug maps."""
     soup = BeautifulSoup(html, "html.parser")
-    judges = JUDGES_BY_SERIES.get(series_num, list(_JUDGES_EARLY))
-    celeb_names, pro_names, celeb_slugs, pro_slugs = _parse_couples_section(soup)
+    judges = JUDGES_BY_SERIES.get(series_num, ["craig", "len", "bruno", "arlene"])
+    celeb_names, pro_names, celeb_slugs, pro_slugs, celeb_verdicts = _parse_couples_section(soup)
 
     week_sections: dict[int, Any] = {}
     for tag in soup.find_all(["h2", "h3", "h4"]):
@@ -472,6 +517,39 @@ def parse_series(
             series_num, week_num, table, judges, celeb_names, pro_names
         )
     ]
+
+    # For series whose week tables lack a Result column, apply verdicts derived
+    # from the Couples table status column.  We tag only the very last row of
+    # each celebrity across the whole series (not per-week), so finals
+    # contestants only get "winner"/"runner-up" on their final performance.
+    if celeb_verdicts:
+        last_idx: dict[str, int] = {}
+        for i, row in enumerate(rows):
+            last_idx[row["celebrity"]] = i
+        for celeb, idx in last_idx.items():
+            if rows[idx]["verdict"]:
+                continue
+            # Exact match first
+            verdict = celeb_verdicts.get(celeb, "")
+            # If no exact match, try matching by disambiguated name
+            # e.g. "Ricky W." in week table → "Ricky Whittle" in Couples table
+            if not verdict:
+                parts = celeb.split()
+                first = parts[0]
+                # Check if last token is a single initial like "W."
+                if len(parts) >= 2 and re.match(r"^[A-Z]\.$", parts[-1]):
+                    initial = parts[-1][0]
+                    candidates = [
+                        v for k, v in celeb_verdicts.items()
+                        if k.startswith(first) and len(k.split()) > 1 and k.split()[1].startswith(initial)
+                    ]
+                else:
+                    candidates = [v for k, v in celeb_verdicts.items() if k.startswith(first)]
+                if len(candidates) == 1:
+                    verdict = candidates[0]
+            if verdict:
+                rows[idx]["verdict"] = verdict
+
     return rows, celeb_slugs, pro_slugs
 
 
@@ -488,6 +566,10 @@ def parse_week_table(
     last_celebrity = ""
     last_professional = ""
     last_verdict = ""
+
+    # Detect whether this table has a Result column by checking the header row
+    header_cells = [clean(c.get_text()).lower() for c in (table.find("tr") or {}).find_all(["td", "th"])]
+    has_result_col = "result" in header_cells
 
     for tr in table.find_all("tr"):
         cells = tr.find_all(["td", "th"])
@@ -507,9 +589,11 @@ def parse_week_table(
             score_text = texts[1]
             dance = texts[2] if len(texts) > 2 else ""
             song_text = texts[3] if len(texts) > 3 else ""
-            mapped = _VERDICT_MAP.get(texts[-1].lower())
-            if mapped is not None:
-                last_verdict = mapped
+
+            if has_result_col:
+                mapped = _VERDICT_MAP.get(texts[-1].lower())
+                if mapped is not None:
+                    last_verdict = mapped
 
         elif parse_int(texts[0]) is not None and last_celebrity:
             score_text = texts[0]
