@@ -311,6 +311,8 @@ const state = {
   week:       "any week",
 };
 
+const JUDGE_COLS = ["craig","len","bruno","arlene","alesha","darcey","shirley","motsi","anton"];
+
 let sortBy = "score"; // score | series | celeb
 let rawData = [];
 
@@ -452,12 +454,10 @@ document.addEventListener("click", () => {
 
 // ── Query ──────────────────────────────────────────────────────────────────
 function runQuery() {
-  // Filter out marathon/a-thon dances and rows with no dance style
-  const isMarathon = d => /marathon|a-thon/i.test(d.dance || "");
-
   let rows = rawData.filter(d =>
     d.total_score != null &&
-    !isMarathon(d) &&
+    d.total_score >= 4 &&
+    JUDGE_COLS.some(j => d[j] != null && !isNaN(d[j])) &&
     d.dance_style != null && d.dance_style !== ""
   );
 
