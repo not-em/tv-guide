@@ -1,8 +1,8 @@
-# tv-guide
+# [tv-guide](https://not-em.github.io/tv-guide/)
 
-Historical data scraped from Wikipedia for British reality and competition TV shows.
+Historical data scraped from Wikipedia for British reality and competition TV show(s) with some visualisation and analysis. Currently just strictly.
 
-Built for analysis and visualisation.
+Github Pages linked in title. 
 
 ---
 
@@ -11,11 +11,9 @@ Built for analysis and visualisation.
 ### strictly/
 Strictly Come Dancing series 10–22 (2012–2024).
 
-**Columns:** `series`, `celebrity`, `professional`, `week`, `dance`, `dance_style`, `song`, `artist`, `total_score`, `craig`, `darcey`, `len`, `bruno`, `shirley`, `motsi`, `anton`, `verdict`.
-
 Judge columns are `NaN` when that judge wasn't on the panel that series.
 
-Pre-2012 data (series 1–9) can be added manually — the format changed enough that automated scraping isn't reliable for those years.
+Guest judges are not included, though their scores are tallied for the overall total. 
 
 ---
 
