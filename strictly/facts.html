@@ -172,7 +172,7 @@
 <div class="container">
   <header>
     <a class="back-link" href="index.html">← strictly</a>
-    <div class="eyebrow">Strictly Come Dancing · Series 10–22 · 2012–2024</div>
+    <div class="eyebrow">Strictly Come Dancing · Series 1–23 · 2004–2025</div>
     <h1>did you know?</h1>
     <p class="subtitle">Facts computed from the scores data. Some are records. Some are surprising. Some are just Strictly being Strictly.</p>
   </header>
@@ -219,10 +219,11 @@ const fmt2 = d3.format(".2f");
 const fmtS = n => (n > 0 ? "+" : "") + fmt2(n);
 
 const JUDGE_LABELS = {
-  craig:"Craig Revel Horwood", darcey:"Darcey Bussell", len:"Len Goodman",
-  bruno:"Bruno Tonioli", shirley:"Shirley Ballas", motsi:"Motsi Mabuse", anton:"Anton Du Beke",
+  craig:"Craig Revel Horwood", len:"Len Goodman", bruno:"Bruno Tonioli",
+  arlene:"Arlene Phillips", alesha:"Alesha Dixon",
+  darcey:"Darcey Bussell", shirley:"Shirley Ballas", motsi:"Motsi Mabuse", anton:"Anton Du Beke",
 };
-const JUDGES = ["craig","darcey","len","bruno","shirley","motsi","anton"];
+const JUDGES = ["craig","len","bruno","arlene","alesha","darcey","shirley","motsi","anton"];
 
 // ── Fact definitions ───────────────────────────────────────────────────────
 // Each is a function(raw) → { category, stat, unit?, headline, body, meta[] }
@@ -299,13 +300,14 @@ const FACT_FINDERS = [
     if (!perfects.length) return null;
     const bySeries = d3.rollup(perfects, v => v.length, d => d.series);
     const mostSeries = [...bySeries.entries()].reduce((a, b) => b[1] > a[1] ? b : a);
+    const firstSeries = d3.min(perfects, d => d.series);
     return {
       category: "perfect 40s",
       stat: perfects.length,
       unit: "total",
-      headline: `${perfects.length} perfect 40s have been awarded across series 10–22`,
-      body: `Series ${mostSeries[0]} had the most, with <strong>${mostSeries[1]}</strong> perfect scores. The first came in series 10; they've become steadily more common as scoring has crept up over time.`,
-      meta: [`Series 10–22`, `${[...bySeries.keys()].length} series with at least one`],
+      headline: `${perfects.length} perfect 40s have been awarded across series 1–23`,
+      body: `Series ${mostSeries[0]} had the most, with <strong>${mostSeries[1]}</strong> perfect scores. The first came in series ${firstSeries}; they've become steadily more common as scoring has crept up over time.`,
+      meta: [`Series 1–23`, `${[...bySeries.keys()].length} series with at least one`],
     };
   },
 
@@ -518,7 +520,7 @@ const FACT_FINDERS = [
       stat: max,
       unit: max === 1 ? "perfect 40" : "perfect 40s",
       headline: `The ${topDances.join(" and ")} ${verb} earned more perfect 40s than any other dance`,
-      body: `${danceList} ${verb} been awarded a perfect panel total <strong>${max}</strong> times across series 10–22.`,
+      body: `${danceList} ${verb} been awarded a perfect panel total <strong>${max}</strong> times across series 1–23.`,
       meta: topDances.length > 1 ? [`${topDances.length} dances tied`] : [],
     };
   },
