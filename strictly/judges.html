@@ -272,10 +272,33 @@
     }
     .container { animation: fadeIn 0.5s ease both; }
 
+    .chart-legend {
+      display: none;
+      flex-wrap: wrap;
+      gap: 0.5rem 1.2rem;
+      margin-top: 1.2rem;
+      font-size: 12px;
+      color: var(--text2);
+    }
+    .chart-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .zoom-hint {
+      display: none;
+      font-size: 10px;
+      color: var(--text3);
+      margin-top: 0.6rem;
+      letter-spacing: 0.04em;
+    }
+
     @media (max-width: 600px) {
       .axis text { font-size: 9px; }
       .line-label { display: none; }
       .zero-label { display: none; }
+      .chart-legend { display: flex; }
+      .zoom-hint { display: block; }
     }
   </style>
 </head>
@@ -286,7 +309,7 @@
   <header>
     <a class="back-link" href="index.html">← strictly</a>
     <div class="eyebrow">Strictly Come Dancing · Series 1–23 · 2004–2025</div>
-    <h1>Who's the harshest<br><em>judge on the dancefloor?</em></h1>
+    <h1>Who's the harshest judge?</h1>
     <p class="subtitle" id="subtitle">Average deviation from the panel mean score, per series. A positive value means the judge scored higher than their colleagues on the same performance; negative means lower.</p>
   </header>
 
@@ -306,6 +329,8 @@
     <svg id="chart"></svg>
     <div class="tooltip" id="tooltip"></div>
   </div>
+  <div id="chart-legend" class="chart-legend"></div>
+  <div class="zoom-hint">pinch or scroll to zoom · drag to pan</div>
 
   <footer>
     Data scraped from Wikipedia and used for personal analysis only. Source pages available at
@@ -429,6 +454,8 @@ d3.csv("strictly_scores.csv", d3.autoType).then(raw => {
     .range([0, w])
     .padding(0.3);
 
+  let xScaled = x;
+
   // We'll set y domain dynamically
   function yDomain(view) {
     const vals = nested.map(d => view === "dev" ? d.mean_dev : d.mean_raw);
@@ -470,7 +497,7 @@ d3.csv("strictly_scores.csv", d3.autoType).then(raw => {
 
   // Line generator
   const lineGen = d3.line()
-    .x(d => x(d.series))
+    .x(d => xScaled(d.series))
     .y(d => y(currentView === "dev" ? d.mean_dev : d.mean_raw))
     .curve(d3.curveCatmullRom.alpha(0.5))
     .defined(d => d.mean_dev != null);
@@ -501,7 +528,7 @@ d3.csv("strictly_scores.csv", d3.autoType).then(raw => {
 
     // X axis
     xAxisG.call(
-      d3.axisBottom(x).tickFormat(d => `${d}`)
+      d3.axisBottom(xScaled).tickFormat(d => `${d}`)
     );
     xAxisG.selectAll("text")
       .style("font-family", "'DM Sans', sans-serif")
@@ -543,7 +570,7 @@ d3.csv("strictly_scores.csv", d3.autoType).then(raw => {
       .attr("class", "dot")
       .attr("r", 4)
       .attr("fill", d => COLOURS[d.judge])
-      .attr("cx", d => x(d.series))
+      .attr("cx", d => xScaled(d.series))
       .on("mousemove", function(event, d) {
         const val = currentView === "dev" ? d.mean_dev : d.mean_raw;
         const fmt = currentView === "dev"
@@ -585,7 +612,7 @@ d3.csv("strictly_scores.csv", d3.autoType).then(raw => {
     lbls.enter()
       .append("text")
       .attr("class", "line-label")
-      .attr("x", d => x(d.series) + 12)
+      .attr("x", d => xScaled(d.series) + 12)
       .attr("fill", d => COLOURS[d.judge])
       .text(d => LABELS[d.judge].split(" ")[0]) // first name only
       .merge(lbls)
@@ -603,6 +630,45 @@ d3.csv("strictly_scores.csv", d3.autoType).then(raw => {
 
   // Initial draw
   redraw(false);
+
+  // Clip so lines/dots don't overflow chart area when zoomed
+  svg.append("defs").append("clipPath")
+    .attr("id", "chart-clip")
+    .append("rect").attr("x", 0).attr("y", -10).attr("width", w).attr("height", h + 20);
+  linesG.attr("clip-path", "url(#chart-clip)");
+  dotsG.attr("clip-path", "url(#chart-clip)");
+
+  // Zoom
+  const zoom = d3.zoom()
+    .scaleExtent([1, 6])
+    .translateExtent([[0, 0], [w, h]])
+    .on("zoom", (event) => {
+      xScaled = event.transform.rescaleX(x);
+      xAxisG.call(d3.axisBottom(xScaled).tickFormat(d => `${d}`));
+      xAxisG.selectAll("text")
+        .style("font-family", "'DM Sans', sans-serif")
+        .style("font-size", isMobile ? "9px" : "11px");
+      linesG.selectAll(".line-path")
+        .attr("d", ([, rows]) => lineGen(rows.sort((a, b) => a.series - b.series)));
+      dotsG.selectAll(".dot").attr("cx", d => xScaled(d.series));
+      labelsG.selectAll(".line-label").attr("x", d => xScaled(d.series) + 12);
+    });
+  d3.select(svgEl).call(zoom);
+
+  // Legend (shown on mobile via CSS)
+  const legendEl = document.getElementById("chart-legend");
+  judges.forEach(judge => {
+    if (!byJudge.has(judge)) return;
+    const item = document.createElement("div");
+    item.className = "chart-legend-item";
+    item.innerHTML = `
+      <svg width="22" height="4" style="flex-shrink:0">
+        <line x1="0" y1="2" x2="22" y2="2" stroke="${COLOURS[judge]}" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+      <span>${LABELS[judge]}</span>
+    `;
+    legendEl.appendChild(item);
+  });
 
   // Buttons
   const SUBTITLES = {
