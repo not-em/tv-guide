@@ -291,7 +291,7 @@
   <div class="controls">
     <span class="control-label">view</span>
     <button class="btn active" id="btn-dev">deviation from mean</button>
-    <button class="btn" id="btn-share">share of total score</button>
+    <button class="btn" id="btn-raw">average score</button>
   </div>
   <div class="controls" style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
     <span class="control-label">style</span>
@@ -371,8 +371,7 @@ d3.csv("strictly_scores.csv", d3.autoType).then(raw => {
     const vals = judges.map(j => d[j]).filter(v => v != null && !isNaN(v));
     d.panel_mean = vals.length ? d3.mean(vals) : null;
     judges.forEach(j => {
-      d[`${j}_dev`]   = (d[j] != null && d.panel_mean != null) ? d[j] - d.panel_mean : null;
-      d[`${j}_share`] = (d[j] != null && d.total_score) ? d[j] / d.total_score : null;
+      d[`${j}_dev`] = (d[j] != null && d.panel_mean != null) ? d[j] - d.panel_mean : null;
     });
   });
 
@@ -385,14 +384,14 @@ d3.csv("strictly_scores.csv", d3.autoType).then(raw => {
     judges.forEach(judge => {
       const bySeries = d3.group(filtered, d => d.series);
       bySeries.forEach((rows, series) => {
-        const devVals   = rows.map(r => r[`${judge}_dev`]).filter(v => v != null);
-        const shareVals = rows.map(r => r[`${judge}_share`]).filter(v => v != null);
+        const devVals = rows.map(r => r[`${judge}_dev`]).filter(v => v != null);
+        const rawVals = rows.map(r => r[judge]).filter(v => v != null && !isNaN(v));
         if (devVals.length < 3) return;
         result.push({
           judge,
           series: +series,
-          mean_dev:   d3.mean(devVals),
-          mean_share: d3.mean(shareVals),
+          mean_dev: d3.mean(devVals),
+          mean_raw: d3.mean(rawVals),
           n: devVals.length,
         });
       });
@@ -426,7 +425,7 @@ d3.csv("strictly_scores.csv", d3.autoType).then(raw => {
 
   // We'll set y domain dynamically
   function yDomain(view) {
-    const vals = nested.map(d => view === "dev" ? d.mean_dev : d.mean_share * 100);
+    const vals = nested.map(d => view === "dev" ? d.mean_dev : d.mean_raw);
     const ext  = d3.extent(vals);
     const pad  = (ext[1] - ext[0]) * 0.18;
     return [ext[0] - pad, ext[1] + pad];
@@ -466,7 +465,7 @@ d3.csv("strictly_scores.csv", d3.autoType).then(raw => {
   // Line generator
   const lineGen = d3.line()
     .x(d => x(d.series))
-    .y(d => y(currentView === "dev" ? d.mean_dev : d.mean_share * 100))
+    .y(d => y(currentView === "dev" ? d.mean_dev : d.mean_raw))
     .curve(d3.curveCatmullRom.alpha(0.5))
     .defined(d => d.mean_dev != null);
 
@@ -507,7 +506,7 @@ d3.csv("strictly_scores.csv", d3.autoType).then(raw => {
       d3.axisLeft(y).ticks(5)
         .tickFormat(d => view === "dev"
           ? (d > 0 ? `+${d.toFixed(2)}` : d.toFixed(2))
-          : `${d.toFixed(1)}%`
+          : d.toFixed(2)
         )
     );
     yAxisG.selectAll("text")
@@ -540,13 +539,13 @@ d3.csv("strictly_scores.csv", d3.autoType).then(raw => {
       .attr("fill", d => COLOURS[d.judge])
       .attr("cx", d => x(d.series))
       .on("mousemove", function(event, d) {
-        const val = view === "dev" ? d.mean_dev : d.mean_share * 100;
-        const fmt = view === "dev"
+        const val = currentView === "dev" ? d.mean_dev : d.mean_raw;
+        const fmt = currentView === "dev"
           ? (val > 0 ? `+${val.toFixed(3)}` : val.toFixed(3))
-          : `${val.toFixed(1)}%`;
-        const sub = view === "dev"
+          : val.toFixed(2);
+        const sub = currentView === "dev"
           ? "avg. deviation from panel mean"
-          : "avg. share of total score";
+          : "avg. score per performance";
         tip.innerHTML = `
           <div class="tooltip-name" style="color:${COLOURS[d.judge]}">${LABELS[d.judge]}</div>
           <div class="tooltip-series">Series ${d.series} · ${d.n} performances</div>
@@ -564,7 +563,7 @@ d3.csv("strictly_scores.csv", d3.autoType).then(raw => {
       .on("mouseleave", () => tip.classList.remove("visible"))
       .merge(dots)
       .transition().duration(animate ? 500 : 0).ease(d3.easeCubicInOut)
-      .attr("cy", d => y(view === "dev" ? d.mean_dev : d.mean_share * 100));
+      .attr("cy", d => y(view === "dev" ? d.mean_dev : d.mean_raw));
 
     dots.exit().remove();
 
@@ -585,7 +584,7 @@ d3.csv("strictly_scores.csv", d3.autoType).then(raw => {
       .text(d => LABELS[d.judge].split(" ")[0]) // first name only
       .merge(lbls)
       .transition().duration(animate ? 500 : 0).ease(d3.easeCubicInOut)
-      .attr("y", d => y(view === "dev" ? d.mean_dev : d.mean_share * 100) + 4);
+      .attr("y", d => y(view === "dev" ? d.mean_dev : d.mean_raw) + 4);
 
     lbls.exit().remove();
   }
@@ -602,22 +601,22 @@ d3.csv("strictly_scores.csv", d3.autoType).then(raw => {
   // Buttons
   const SUBTITLES = {
     dev:   "Average deviation from the panel mean score, per series. A positive value means the judge scored higher than their colleagues on the same performance; negative means lower.",
-    share: "Each judge's score as a percentage of the total panel score, averaged per series. Equal contribution would be 25% across a four-judge panel.",
+    raw:   "Average score given by each judge, per series. Reflects individual scoring tendencies regardless of panel consensus.",
   };
 
   document.getElementById("btn-dev").addEventListener("click", () => {
     currentView = "dev";
     document.getElementById("btn-dev").classList.add("active");
-    document.getElementById("btn-share").classList.remove("active");
+    document.getElementById("btn-raw").classList.remove("active");
     document.getElementById("subtitle").textContent = SUBTITLES.dev;
     redraw(true);
   });
 
-  document.getElementById("btn-share").addEventListener("click", () => {
-    currentView = "share";
-    document.getElementById("btn-share").classList.add("active");
+  document.getElementById("btn-raw").addEventListener("click", () => {
+    currentView = "raw";
+    document.getElementById("btn-raw").classList.add("active");
     document.getElementById("btn-dev").classList.remove("active");
-    document.getElementById("subtitle").textContent = SUBTITLES.share;
+    document.getElementById("subtitle").textContent = SUBTITLES.raw;
     redraw(true);
   });
 
