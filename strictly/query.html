@@ -479,18 +479,19 @@ function runQuery() {
     rows = rows.filter(d => String(d.week) === state.week);
   }
 
-  // Sort by score (asc or desc depending on metric), then apply result sort
+  // Sort by score percentage (asc or desc depending on metric), then apply result sort
+  const pct = d => d.total_score / d.max_score;
   rows.sort((a, b) =>
     state.metric === "highest"
-      ? b.total_score - a.total_score
-      : a.total_score - b.total_score
+      ? pct(b) - pct(a) || b.total_score - a.total_score
+      : pct(a) - pct(b) || a.total_score - b.total_score
   );
 
   // Secondary sort by chosen sort dimension
   if (sortBy === "series") {
-    rows.sort((a, b) => a.series - b.series || a.week - b.week || (state.metric === "highest" ? b.total_score - a.total_score : a.total_score - b.total_score));
+    rows.sort((a, b) => a.series - b.series || a.week - b.week || (state.metric === "highest" ? pct(b) - pct(a) : pct(a) - pct(b)));
   } else if (sortBy === "week") {
-    rows.sort((a, b) => a.week - b.week || a.series - b.series || (state.metric === "highest" ? b.total_score - a.total_score : a.total_score - b.total_score));
+    rows.sort((a, b) => a.week - b.week || a.series - b.series || (state.metric === "highest" ? pct(b) - pct(a) : pct(a) - pct(b)));
   } else if (sortBy === "celeb") {
     rows.sort((a, b) => a.celebrity.localeCompare(b.celebrity));
   }
@@ -503,11 +504,6 @@ function runQuery() {
 function renderResults(rows) {
   const area = document.getElementById("results-area");
   const countEl = document.getElementById("results-count");
-
-  // Score range for bar widths
-  const maxScore = d3.max(rows, d => d.total_score) || 40;
-  const minScore = d3.min(rows, d => d.total_score) || 0;
-  const scoreRange = maxScore - minScore || 1;
 
   const MAX_ROWS = 50;
   const shown = rows.slice(0, MAX_ROWS);
@@ -540,9 +536,8 @@ function renderResults(rows) {
   const tbody = document.createElement("tbody");
   shown.forEach((row, i) => {
     const tr = document.createElement("tr");
-    const barPct = state.metric === "highest"
-      ? ((row.total_score - minScore) / scoreRange * 100).toFixed(1)
-      : ((maxScore - row.total_score) / scoreRange * 100).toFixed(1);
+    const rowPct = row.total_score / row.max_score;
+    const barPct = (state.metric === "highest" ? rowPct : 1 - rowPct) * 100;
 
     tr.innerHTML = `
       <td class="td-rank">${i + 1}</td>
@@ -550,8 +545,8 @@ function renderResults(rows) {
       <td class="td-dance">${row.dance}</td>
       <td>${row.professional}</td>
       <td class="num">${row.series} · ${row.week}</td>
-      <td class="td-score">${row.total_score}<span class="score-max"> /40</span></td>
-      <td class="td-bar-wrap"><div class="td-bar-bg"><div class="td-bar-fill" style="width:${barPct}%"></div></div></td>
+      <td class="td-score">${row.total_score}<span class="score-max"> /${row.max_score}</span></td>
+      <td class="td-bar-wrap"><div class="td-bar-bg"><div class="td-bar-fill" style="width:${barPct.toFixed(1)}%"></div></div></td>
     `;
     tbody.appendChild(tr);
   });
@@ -573,6 +568,9 @@ function renderResults(rows) {
 
 // ── Load data & init ───────────────────────────────────────────────────────
 d3.csv("strictly_scores.csv", d3.autoType).then(raw => {
+  raw.forEach(d => {
+    d.max_score = d.total_score > 40 ? 50 : 40;
+  });
   rawData = raw;
   buildSentence();
   runQuery();
