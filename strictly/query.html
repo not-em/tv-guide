@@ -273,7 +273,11 @@
   <div class="results-header">
     <span class="results-count" id="results-count"></span>
     <div class="results-sort">
-      <span>sort by</span>
+      <span>show</span>
+      <button class="sort-btn active" id="rows-20">20</button>
+      <button class="sort-btn" id="rows-50">50</button>
+      <button class="sort-btn" id="rows-all">all</button>
+      <span style="margin-left:0.5rem">sort by</span>
       <button class="sort-btn active" id="sort-score">score</button>
       <button class="sort-btn" id="sort-series">series</button>
       <button class="sort-btn" id="sort-week">week</button>
@@ -333,7 +337,8 @@ document.getElementById("clear-btn").addEventListener("click", () => {
   runQuery();
 });
 
-let sortBy = "score"; // score | series | celeb
+let sortBy = "score"; // score | series | celeb | week
+let maxRows = 20;
 let rawData = [];
 
 // ── Token definitions ──────────────────────────────────────────────────────
@@ -527,12 +532,11 @@ function renderResults(rows) {
   const countEl = document.getElementById("results-count");
 
 
-  const MAX_ROWS = 50;
-  const shown = rows.slice(0, MAX_ROWS);
+  const shown = maxRows === Infinity ? rows : rows.slice(0, maxRows);
 
   countEl.textContent = rows.length === 0
     ? "no results"
-    : `${rows.length} performance${rows.length !== 1 ? "s" : ""}${rows.length > MAX_ROWS ? ` · showing top ${MAX_ROWS}` : ""}`;
+    : `${rows.length} performance${rows.length !== 1 ? "s" : ""}${rows.length > shown.length ? ` · showing ${shown.length}` : ""}`;
 
   if (rows.length === 0) {
     area.innerHTML = `<div class="no-results">no performances match these filters</div>`;
@@ -577,6 +581,16 @@ function renderResults(rows) {
   area.innerHTML = "";
   area.appendChild(table);
 }
+
+// ── Row count buttons ──────────────────────────────────────────────────────
+[["rows-20", 20], ["rows-50", 50], ["rows-all", Infinity]].forEach(([id, n]) => {
+  document.getElementById(id).addEventListener("click", () => {
+    maxRows = n;
+    ["rows-20", "rows-50", "rows-all"].forEach(i => document.getElementById(i).classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+    runQuery();
+  });
+});
 
 // ── Sort buttons ───────────────────────────────────────────────────────────
 ["score", "series", "week", "celeb"].forEach(key => {
