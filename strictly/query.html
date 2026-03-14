@@ -261,6 +261,13 @@
     <div class="query-sentence" id="query-sentence">
       <!-- built by JS -->
     </div>
+    <button id="clear-btn" style="
+      margin-top: 1rem; display: none;
+      font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 400;
+      padding: 5px 14px; border-radius: 20px;
+      border: 0.5px solid var(--border); background: transparent;
+      color: var(--text3); cursor: pointer; transition: all 0.15s;
+    ">clear filters</button>
   </div>
 
   <div class="results-header">
@@ -312,6 +319,19 @@ const state = {
 };
 
 const JUDGE_COLS = ["craig","len","bruno","arlene","alesha","darcey","shirley","motsi","anton"];
+
+const DEFAULTS = { metric: "highest", dance: "any dance", style: "any style", gender: "anyone", series: "any series", week: "any week" };
+
+function updateClearBtn() {
+  const active = Object.keys(DEFAULTS).some(k => state[k] !== DEFAULTS[k]);
+  document.getElementById("clear-btn").style.display = active ? "inline-block" : "none";
+}
+
+document.getElementById("clear-btn").addEventListener("click", () => {
+  Object.assign(state, { ...DEFAULTS });
+  buildSentence();
+  runQuery();
+});
 
 let sortBy = "score"; // score | series | celeb
 let rawData = [];
@@ -445,6 +465,7 @@ function buildSentence() {
   el.appendChild(makeToken("series"));
   el.appendChild(txt(", "));
   el.appendChild(makeToken("week"));
+  updateClearBtn();
 }
 
 // Close dropdowns on outside click
@@ -479,7 +500,7 @@ function runQuery() {
     rows = rows.filter(d => String(d.week) === state.week);
   }
 
-  // Sort by score percentage (asc or desc depending on metric), then apply result sort
+  // Sort by score (asc or desc depending on metric), then apply result sort
   const pct = d => d.total_score / d.max_score;
   rows.sort((a, b) =>
     state.metric === "highest"
@@ -504,6 +525,7 @@ function runQuery() {
 function renderResults(rows) {
   const area = document.getElementById("results-area");
   const countEl = document.getElementById("results-count");
+
 
   const MAX_ROWS = 50;
   const shown = rows.slice(0, MAX_ROWS);
